@@ -1,0 +1,12 @@
+[env]
+autoload_custom_variables = []
+
+[renderer]
+vsync = false
+
+[settings]
+debug = true
+
+[style]
+font-family = 'segoeuib.ttf'
+font-size = 19
