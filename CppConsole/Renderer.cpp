@@ -62,8 +62,7 @@ void cc_int_input(const char* text, int* value, const bool disabled, const char*
 		}
 	}
 	else {
-		cc_tooltip("This input is disabled while the auto-clicker is running.\n"
-				   "Press \"Stop\" to change settings.");
+		ImGui::Text("The %s is currently disabled.", text);
 	}
 }
 
@@ -77,9 +76,21 @@ void cc_int2_input(const char* text, int values[2], const bool disabled, const c
 		}
 	}
 	else {
-		cc_tooltip("This input is disabled while the auto-clicker is running.\n"
-			"Press \"Stop\" to change settings.");
+		ImGui::Text("The %s is currently disabled.", text);
 	}
+}
+
+static const char* cc_click_type_getter(void* data, int index)
+{
+	auto click_types = (ClickType*)data;
+	if (index == static_cast<int>(ClickType::SingleClick)) {
+		return "Single Click";
+	}
+	else if (index == static_cast<int>(ClickType::DoubleClick)) {
+		return "Double Click";
+	}
+
+	return "UNHANDLED CLICK TYPE?";
 }
 
 /* 
@@ -122,62 +133,116 @@ static void debug_window(RenderingContext& rcontext) noexcept {
 		rcontext.waiting_for_thread_exit ? "Yes" : "No",
 		rcontext.prev_waiting_for_thread_exit ? "Yes" : "No"
 	);
+	ImGui::Text("ClickTypeIdx: %i", rcontext.selected_click_type);
 
 	ImGui::End();
 }
 
-static void clicking_logic(ClickInfo info) noexcept
+static void clicking_logic(RenderingContext* info) noexcept
 {
-	if (info.launch_delay != 0) {
+	if (info->launch_delay != 0) {
 		std::this_thread::sleep_for(
-			std::chrono::milliseconds(info.launch_delay)
+			std::chrono::milliseconds(info->launch_delay)
 		);
 	}
 
-	while (!*info.stop) {
+	while (!info->stop_click_threadf) {
 		if (GetAsyncKeyState(VK_F7) & 0x8000) {
-			*info.stop = true;
+			// We have to trigger this to sync the UI.
+			info->prev_waiting_for_thread_exit = true;
+			info->waiting_for_thread_exit = false;
+			// Sleep for 100ms to allow the main thread to catch up with changes.
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			// Once we break, we will sync.
 			break;
 		}
 
-		INPUT inputs[2] = {};
+		int cursor_x = 0, cursor_y = 0;
+		if (info->coords[0] == 0 && info->coords[1] == 0) {
+			POINT cursor_pos = {};
+			GetCursorPos(&cursor_pos);
+			cursor_x = cursor_pos.x;
+			cursor_y = cursor_pos.y;
+		}
+		else {
+			cursor_x = info->coords[0];
+			cursor_y = info->coords[1];
+		}
 
-		POINT cursor_pos = {};
-		GetCursorPos(&cursor_pos);
+		auto click_type = info->all_click_types[info->selected_click_type];
 
-		inputs[0].type = INPUT_MOUSE;
-		inputs[0].mi.dx = cursor_pos.x;
-		inputs[0].mi.dy = cursor_pos.y;
-		inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+		if (click_type == ClickType::SingleClick) {
+			INPUT inputs[2] = {};
 
-		inputs[1].type = INPUT_MOUSE;
-		inputs[1].mi.dx = cursor_pos.x;
-		inputs[1].mi.dy = cursor_pos.y;
-		inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+			inputs[0].type = INPUT_MOUSE;
+			inputs[0].mi.dx = cursor_x;
+			inputs[0].mi.dy = cursor_y;
+			inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
 
-		auto sent = 
-			SendInput(ARRAYSIZE(inputs), inputs, sizeof(INPUT));
+			inputs[1].type = INPUT_MOUSE;
+			inputs[1].mi.dx = cursor_x;
+			inputs[1].mi.dy = cursor_y;
+			inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
 
-		if (sent != ARRAYSIZE(inputs)) {
-			// This click failed...
-			std::println("Click failed!");
-			std::println("GetLastError() = {}", GetLastError());
+			auto sent =
+				SendInput(ARRAYSIZE(inputs), inputs, sizeof(INPUT));
+
+			if (sent != ARRAYSIZE(inputs)) {
+				// This click failed...
+				std::println("Click failed!");
+				std::println("GetLastError() = {}", GetLastError());
+			}
+			else {
+				info->total_clicks += 1;
+			}
+		}
+		else if (click_type == ClickType::DoubleClick) {
+			INPUT inputs[4] = {};
+
+			inputs[0].type = INPUT_MOUSE;
+			inputs[0].mi.dx = cursor_x;
+			inputs[0].mi.dy = cursor_y;
+			inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+
+			inputs[1].type = INPUT_MOUSE;
+			inputs[1].mi.dx = cursor_x;
+			inputs[1].mi.dy = cursor_y;
+			inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+
+			inputs[2].type = INPUT_MOUSE;
+			inputs[2].mi.dx = cursor_x;
+			inputs[2].mi.dy = cursor_y;
+			inputs[2].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+
+			inputs[3].type = INPUT_MOUSE;
+			inputs[3].mi.dx = cursor_x;
+			inputs[3].mi.dy = cursor_y;
+			inputs[3].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+
+			auto sent =
+				SendInput(ARRAYSIZE(inputs), inputs, sizeof(INPUT));
+
+			if (sent != ARRAYSIZE(inputs)) {
+				// This click failed...
+				std::println("Click failed!");
+				std::println("GetLastError() = {}", GetLastError());
+			}
+			else {
+				info->total_clicks += 2;
+			}
 		}
 
 		std::this_thread::sleep_for(
-			std::chrono::milliseconds(info.ms_between_clicks)
+			std::chrono::milliseconds(info->millis_between_click)
 		);
 	}
 
 	// This signifies to the main thread that the working thread has exited successfully.
-	*info.stop = false;
+	info->stop_click_threadf = false;
 	ExitThread(0);
 }
 
 static bool launch_clicking_thread(RenderingContext& rcontext) {
-	rcontext.click_info.ms_between_clicks = rcontext.millis_between_click;
-	rcontext.click_info.stop = &rcontext.stop_click_threadf;
-	rcontext.click_info.launch_delay = rcontext.launch_delay;
 	rcontext.stop_click_threadf = false;
 
 	rcontext.logln("Launching auto-clicker with {}ms delay.", 
@@ -187,7 +252,7 @@ static bool launch_clicking_thread(RenderingContext& rcontext) {
 		NULL,
 		NULL,
 		(LPTHREAD_START_ROUTINE)clicking_logic,
-		&rcontext.click_info,
+		&rcontext,
 		NULL,
 		NULL);
 
@@ -204,16 +269,23 @@ static void setup_default_states(RenderingContext& rcontext) noexcept {
 	// NOTE: The state of Coordinates must always be State::Clickable; the logic on whether on not to
 	//       show this widget is handled with a checkbox (rcontext.coords_enabled)
 	rcontext.set_widget_state(InputWidget::Coordinates, State::Clickable);
+	rcontext.set_widget_state(InputWidget::ClickType, State::Clickable);
 }
 static void on_start_disable_input(RenderingContext& rcontext) noexcept {
 	rcontext.set_widget_state(InputWidget::LaunchDelay, State::Unclickable);
 	rcontext.set_widget_state(InputWidget::MillisecondBetweenClick, State::Unclickable);
 	rcontext.set_widget_state(InputWidget::Coordinates, State::Unclickable);
+	rcontext.set_widget_state(InputWidget::ClickType, State::Unclickable);
+
+	rcontext.set_button_state(Button::CoordinatesEnabled, State::Unclickable);
 }
 static void on_stop_enable_input(RenderingContext& rcontext) noexcept {
 	rcontext.set_widget_state(InputWidget::LaunchDelay, State::Clickable);
 	rcontext.set_widget_state(InputWidget::MillisecondBetweenClick, State::Clickable);
 	rcontext.set_widget_state(InputWidget::Coordinates, State::Clickable);
+	rcontext.set_widget_state(InputWidget::ClickType, State::Clickable);
+
+	rcontext.set_button_state(Button::CoordinatesEnabled, State::Clickable);
 }
 
 void core_render_function(ImGuiIO& io, Renderer& renderer, OpenClicker& context)
@@ -223,9 +295,9 @@ void core_render_function(ImGuiIO& io, Renderer& renderer, OpenClicker& context)
 	auto& rcontext = renderer.render_context();
 	bool debug_enabled = context.is_debug();
 
-	renderer.resize_window(1920, 1080);
+	ImGui::SetNextWindowSize(ImVec2(850, 500));
 
-	ImGui::Begin("CppConsole *Alpha", NULL, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse);
+	ImGui::Begin("OpenClicker", NULL, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse);
 	if (config.font())
 		ImGui::PushFont(config.font());
 
@@ -265,12 +337,40 @@ void core_render_function(ImGuiIO& io, Renderer& renderer, OpenClicker& context)
 		rcontext.millis_between_click = 0;
 	}
 
+	auto ct_is_disabled = 
+		rcontext.get_widget_state(InputWidget::ClickType) == State::Unclickable;
+
+	if (ct_is_disabled) {
+		ImGui::Text("The click type selector is currently disabled. Please wait.");
+	}
+	else {
+		ImGui::ListBox("Click Type",
+			&rcontext.selected_click_type,
+			cc_click_type_getter,
+			rcontext.all_click_types,
+			click_type_count
+		);
+		ImGui::SameLine();
+		ImGui::Text(":  %s", cc_click_type_getter(rcontext.all_click_types, rcontext.selected_click_type));
+		ImGui::SameLine();
+		cc_tooltip("Select what type of click will occur.\n"
+				   "Single Click - Send one click\n"
+				   "Double Click - Sends two clicks"
+		);
+	}
+
 	// ---- Coordinates widget logic ---- // 
 
-	cc_checkbox("Use custom coordinates", &rcontext.coords_enabled, "Enable custom coordinates for the clicks.");
+	auto ucc_is_disabled =
+		rcontext.get_button_state(Button::CoordinatesEnabled) == State::Unclickable;
+	if (!ucc_is_disabled) {
+		cc_checkbox("Use custom coordinates", &rcontext.coords_enabled, "Enable custom coordinates for the clicks.");
+	}
+	else {
+		ImGui::Text("The Use Custom Coordinates checkbox is currently disabled while the clicker runs.");
+	}
 
 	if (rcontext.coords_enabled) {
-		ImGui::SameLine();
 		cc_int2_input("Specify custom mouse coordinates", 
 			rcontext.coords, 
 			rcontext.get_widget_state(InputWidget::Coordinates) == State::Unclickable,
@@ -279,7 +379,41 @@ void core_render_function(ImGuiIO& io, Renderer& renderer, OpenClicker& context)
 			"IMPORTANT: If both these values are zero, the current mouse position is used.\n"
 			"IMPORTANT: If this value is disabled, the current position is used."
 		);
+
+		if (cc_button(
+			"Capture Mouse Coordinates",
+			"Press to automatically capture a position on the screen to be used.\n"
+			"After pressing, click F7 once your mouse is in the correct position and those coordinates will be used."))
+		{
+			rcontext.capturing_mouse_coords = true;
+		}
 	}
+	else {
+		rcontext.capturing_mouse_coords = false;
+	}
+
+	if (rcontext.capturing_mouse_coords) {
+		ImGui::Text("Press F7 once you want to capture the mouse position...");
+		if (GetAsyncKeyState(VK_F7) & 0x8000) {
+			POINT point = {};
+			if (!GetCursorPos(&point)) {
+				rcontext.logln("GetCursorPos() returned FALSE. (GetLastError() = {})", GetLastError());
+			}
+			else {
+				rcontext.coords[0] = point.x;
+				rcontext.coords[1] = point.y;
+			}
+			rcontext.capturing_mouse_coords = false;
+			rcontext.logln("Captured mouse coordinates and auto-filled coords section. (X={}, Y={})", 
+				rcontext.coords[0], 
+				rcontext.coords[1]
+			);
+		}
+	}
+
+	ImGui::SeparatorText("Stats");
+
+	ImGui::Text("Total Simulated Clicks: %zu", rcontext.total_clicks);
 
 	ImGui::SeparatorText("Actions");
 
@@ -344,7 +478,7 @@ void core_render_function(ImGuiIO& io, Renderer& renderer, OpenClicker& context)
 	// We check if the thread has terminated itself (Via F7) 
 	// And sort the state out.
 
-	if (rcontext.stop_click_threadf) {
+	if (rcontext.stop_click_threadf && !rcontext.waiting_for_thread_exit) {
 		if (rcontext.get_button_state(Button::Start) == State::Unclickable) 
 		{
 			// We need to clean.

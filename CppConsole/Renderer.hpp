@@ -31,29 +31,23 @@ void cc_int2_input(
 
 void core_render_function(ImGuiIO& io, Renderer& renderer, OpenClicker& context);
 
-// This struct is only to be passed into the worker thread.
-// It must never be modified manually. (Other than when setting it up)
-// It is setup by [Renderer.cpp:launch_clicking_thread(...)]
-struct ClickInfo {
-	int ms_between_clicks;
-	int launch_delay;
+enum class ClickType {
+	// Just one single key press
+	SingleClick,
+	// The same as above, but twice.
+	DoubleClick,
 
-	/*
-	* If this is set to true externally, the thread must stop.
-	* The clicking thread must then also set this to false once it has stopped
-	* and is about to exit. This is to keep UI synced with actual functionality.
-	* 
-	* Without this, the user would be able to launch a new thread without the already
-	* running one stopping. We acheive this safety by the "Start" button not being visible
-	* until the worker thread has actually exited.
-	*/
-	bool* stop;
+	SizeOfClickTypeDontTouch,
 };
+
+constexpr std::size_t click_type_count =
+	static_cast<std::size_t>(ClickType::SizeOfClickTypeDontTouch);
 
 enum class InputWidget {
 	MillisecondBetweenClick,
 	LaunchDelay,
 	Coordinates,
+	ClickType,
 	CountOfWidgetsDontMove
 };
 
@@ -99,12 +93,19 @@ struct RenderingContext {
 	bool first_render_call{ true };
 	std::int32_t millis_between_click{ 1 };
 	std::int32_t launch_delay{ 1 };
-	ClickInfo click_info;
+
+	// Corresponding to the below array. (Defaults to SingleClick)
+	int selected_click_type = 0;
+	// MUST be in this order.
+	ClickType all_click_types[2] = { ClickType::SingleClick, ClickType::DoubleClick };
 
 	bool coords_enabled{ false };
 	int coords[2] = { 0, 0 };
+	bool capturing_mouse_coords{ false };
 
 	std::string log_text{"This is the log text, useful information will live here.\n"};
+
+	std::size_t total_clicks = 0;
 
 	template <class... Ts>
 	inline void logln(const std::format_string<Ts...> fmt, Ts&&... args) noexcept {
