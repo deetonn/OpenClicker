@@ -22,7 +22,7 @@
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{82e33820-eb54-47f8-be07-c42432a4dc4b}</ProjectGuid>
-    <RootNamespace>CppConsole</RootNamespace>
+    <RootNamespace>OpenClicker</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>OpenClicker</ProjectName>
   </PropertyGroup>
@@ -72,14 +72,14 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;C:\Users\deeto\source\repos\CppConsole\Dependencies\tomlplusplus-3.4.0\include\toml++;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;C:\Users\deeto\source\repos\OpenClicker\Dependencies\tomlplusplus-3.4.0\include\toml++;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\Users\deeto\source\repos\CppConsole\Dependencies\tomlplusplus-3.4.0\include\toml++;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\deeto\source\repos\OpenClicker\Dependencies\tomlplusplus-3.4.0\include\toml++;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;C:\Users\deeto\source\repos\CppConsole\Dependencies\imgui-1.90.9;C:\Users\deeto\source\repos\CppConsole\Dependencies\tomlplusplus-3.4.0\include\toml++;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;C:\Users\deeto\source\repos\OpenClicker\Dependencies\imgui-1.90.9;C:\Users\deeto\source\repos\OpenClicker\Dependencies\tomlplusplus-3.4.0\include\toml++;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
