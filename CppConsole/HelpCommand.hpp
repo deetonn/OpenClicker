@@ -6,7 +6,7 @@
 #include "BuiltinCommand.hpp"
 
 static int32_t builtin_help_command_impl(
-	Console* console,
+	OpenClicker* console,
 	std::vector<std::string_view>* args
 )
 {

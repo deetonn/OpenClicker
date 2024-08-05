@@ -32,10 +32,10 @@ struct ResizeInfo {
 // Forward declare Renderer so that RenderCallback can use it.
 class Renderer;
 // Forward declare Console so that RenderCallback can use it.
-class Console;
+class OpenClicker;
 
 using RenderCallback = std::function<
-	void(ImGuiIO&, Renderer&, Console&)
+	void(ImGuiIO&, Renderer&, OpenClicker&)
 >;
 
 class RenderBackend {
@@ -69,7 +69,7 @@ public:
 	// This will cause the application rendering loop to begin.
 	void render(
 		const RenderCallback& render_call, 
-		Console& context,
+		OpenClicker& context,
 		Renderer& renderer
 	) noexcept;
 

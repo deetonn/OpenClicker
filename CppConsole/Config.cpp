@@ -41,6 +41,8 @@ toml::table create_default_configuration() {
 	// Enable vsync by default so that we don't do 8000fps for zero
 	// reason.
 	rendering_table->insert_or_assign("vsync", true);
+	rendering_table->insert_or_assign("width", DEFAULT_WINDOW_WIDTH);
+	rendering_table->insert_or_assign("height", DEFAULT_WINDOW_HEIGHT);
 
 	root_table.insert_or_assign("env", toml::table{});
 	auto env_table = root_table["env"].as_table();

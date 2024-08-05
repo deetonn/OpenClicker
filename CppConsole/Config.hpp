@@ -14,6 +14,9 @@
 
 #define ROOT_FONT_PATH "C:\\Windows\\Fonts\\"
 
+#define DEFAULT_WINDOW_WIDTH 1280
+#define DEFAULT_WINDOW_HEIGHT 720
+
 toml::table create_default_configuration();
 
 class Config {

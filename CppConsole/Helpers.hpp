@@ -3,12 +3,12 @@
 #include <string>
 #include <vector>
 
-inline std::vector<std::string> string_split(
-    const std::string& str, 
-    const std::string& delimiter
+inline std::vector<std::string_view> string_split(
+    const std::string_view str, 
+    const std::string_view delimiter
 )
 {
-    std::vector<std::string> v;
+    std::vector<std::string_view> v;
     if (!str.empty()) {
         int start = 0;
         do {

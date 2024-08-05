@@ -1,10 +1,15 @@
 #include <windows.h>
+#include <ranges>
 
 #include "Console.hpp"
 
 #include "Renderer.hpp"
+#include "Helpers.hpp"
 
-void Console::clear() noexcept {
+namespace ranges = std::ranges;
+namespace views = ranges::views;
+
+void OpenClicker::clear_console() noexcept {
     auto* logger = Logger::the();
     HANDLE hStdOut;
 
@@ -14,7 +19,7 @@ void Console::clear() noexcept {
     DWORD mode = 0;
     if (!GetConsoleMode(hStdOut, &mode))
     {
-        auto last_error = ::GetLastError();
+        auto last_error = GetLastError();
         logger->write(LogKind::Error, "In Console::clear(), the function failed at GetConsoleMode(...).");
         logger->write(LogKind::Error, "  GetLastError() returned {}", last_error);
         return;
@@ -40,7 +45,7 @@ void Console::clear() noexcept {
     {
         // If we fail, try to restore the mode on the way out.
         SetConsoleMode(hStdOut, originalMode);
-        auto last_error = ::GetLastError();
+        auto last_error = GetLastError();
         logger->write(LogKind::Error, "In Console::clear(), the function failed at WriteConsoleW(...).");
         logger->write(LogKind::Error, "  GetLastError() returned {}", last_error);
         return;
@@ -53,7 +58,7 @@ void Console::clear() noexcept {
     SetConsoleMode(hStdOut, originalMode);
 }
 
-int32_t Console::run(int argc, char** argv) noexcept {
+int32_t OpenClicker::run(int argc, char** argv) noexcept {
     m_renderer->begin_render_loop(*this, *m_renderer);
     return 0;
 }
