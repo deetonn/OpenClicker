@@ -65,6 +65,7 @@ enum class InputWidget {
 	Coordinates,
 	ClickType,
 	MouseButtonSelection,
+	TimeScaleSelection,
 
 	CountOfWidgetsDontMove
 };
@@ -85,6 +86,24 @@ constexpr std::size_t button_count =
 enum class State {
 	Clickable,
 	Unclickable
+};
+
+enum class TimeScale {
+	Milliseconds,
+	Seconds,
+	Minutes,
+	Hours,
+
+	CountOfTimeScaleDontMove,
+};
+
+constexpr std::size_t time_scale_count =
+	static_cast<std::size_t>(TimeScale::CountOfTimeScaleDontMove);
+
+struct TimeScaleInfo {
+	const char* title_text;
+	const char* tooltip_text;
+	TimeScale scale;
 };
 
 struct Stats {
@@ -117,7 +136,7 @@ struct RenderingContext {
 	bool waiting_for_thread_exit{ false };
 
 	bool first_render_call{ true };
-	std::int32_t millis_between_click{ 1 };
+	std::int32_t time_between_click{ 1 };
 	std::int32_t launch_delay{ 1 };
 
 	// Corresponding to the below array. (Defaults to SingleClick)
@@ -137,6 +156,31 @@ struct RenderingContext {
 	std::string log_text{"This is the log text, useful information will live here.\n"};
 
 	Stats stats{};
+
+	bool use_diff_time_scale{ false };
+	TimeScaleInfo time_scales[4] {
+		TimeScaleInfo {
+			.title_text = "Number of milliseconds between clicks",
+			.tooltip_text = "The amount of milliseconds that will pass between clicks.",
+			.scale = TimeScale::Milliseconds
+		},
+		TimeScaleInfo {
+			.title_text = "Number of seconds between clicks",
+			.tooltip_text = "The amount of seconds that will pass between clicks.",
+			.scale = TimeScale::Seconds
+		},
+		TimeScaleInfo {
+			.title_text = "Number of minutes between clicks",
+			.tooltip_text = "The amount of minutes that will pass between clicks.",
+			.scale = TimeScale::Minutes
+		},
+		TimeScaleInfo {
+			.title_text = "Number of hours between clicks",
+			.tooltip_text = "The amount of hours between clicks.",
+			.scale = TimeScale::Hours
+		}
+	};
+	int selected_time_scale{ 0 };
 
 	template <class... Ts>
 	inline void logln(const std::format_string<Ts...> fmt, Ts&&... args) noexcept {

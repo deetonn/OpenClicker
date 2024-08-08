@@ -111,6 +111,25 @@ static const char* cc_mouse_button_getter(void* data, int index)
 	return "UNHANDLED MOUSE BUTTON?";
 }
 
+static const char* cc_time_scale_getter(void* data, int index)
+{
+	TimeScaleInfo* scales = (TimeScaleInfo*)data;
+	auto kind = scales[index].scale;
+
+	switch (kind) {
+	case TimeScale::Milliseconds:
+		return "Milliseconds";
+	case TimeScale::Seconds:
+		return "Seconds";
+	case TimeScale::Minutes:
+		return "Minutes";
+	case TimeScale::Hours:
+		return "Hours";
+	}
+
+	return "UNHANDLED TIME SCALE??";
+}
+
 /* 
  Beginning of function that only exist in the source and need no definition. 
  These function are specifically called by core_render_function(...) and should
@@ -143,7 +162,7 @@ static void debug_window(RenderingContext& rcontext) noexcept {
 			state == State::Clickable ? "Enabled" : "Disabled");
 	}
 
-	ImGui::Text("MillisBetweenClick: %i", rcontext.millis_between_click);
+	ImGui::Text("MillisBetweenClick: %i", rcontext.time_between_click);
 	ImGui::Text("Coords: (%i, %i)", rcontext.coords[0], rcontext.coords[1]);
 	ImGui::Text("ThreadExitSignal: %s", rcontext.stop_click_threadf ? "Yes" : "No");
 	ImGui::Text("ThreadHasExited: %s", rcontext.stop_click_threadf == false ? "Yes" : "No");
@@ -374,6 +393,27 @@ static void create_mouse_event(INPUT* inputs, int index, RenderingContext& conte
 	}
 }
 
+static void sleep_correctly(RenderingContext* context)
+{
+	auto sleep_time = context->time_between_click;
+	auto scale = context->time_scales[context->selected_time_scale].scale;
+
+	switch (scale) {
+	case TimeScale::Milliseconds:
+		std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
+		return;
+	case TimeScale::Seconds:
+		std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
+		return;
+	case TimeScale::Minutes:
+		std::this_thread::sleep_for(std::chrono::minutes(sleep_time));
+		return;
+	case TimeScale::Hours:
+		std::this_thread::sleep_for(std::chrono::hours(sleep_time));
+		return;
+	}
+}
+
 static void clicking_logic(RenderingContext* info) noexcept
 {
 	if (info->launch_delay != 0) {
@@ -433,9 +473,7 @@ static void clicking_logic(RenderingContext* info) noexcept
 			}
 		}
 
-		std::this_thread::sleep_for(
-			std::chrono::milliseconds(info->millis_between_click)
-		);
+		sleep_correctly(info);
 	}
 
 	// This signifies to the main thread that the working thread has exited successfully.
@@ -445,9 +483,6 @@ static void clicking_logic(RenderingContext* info) noexcept
 
 static bool launch_clicking_thread(RenderingContext& rcontext) {
 	rcontext.stop_click_threadf = false;
-
-	rcontext.logln("Launching auto-clicker with {}ms delay.", 
-		rcontext.millis_between_click);
 
 	auto handle = CreateThread(
 		NULL,
@@ -472,6 +507,7 @@ static void setup_default_states(RenderingContext& rcontext) noexcept {
 	rcontext.set_widget_state(InputWidget::Coordinates, State::Clickable);
 	rcontext.set_widget_state(InputWidget::ClickType, State::Clickable);
 	rcontext.set_widget_state(InputWidget::MouseButtonSelection, State::Clickable);
+	rcontext.set_widget_state(InputWidget::TimeScaleSelection, State::Clickable);
 }
 static void on_start_disable_input(RenderingContext& rcontext) noexcept {
 	rcontext.set_widget_state(InputWidget::LaunchDelay, State::Unclickable);
@@ -479,6 +515,7 @@ static void on_start_disable_input(RenderingContext& rcontext) noexcept {
 	rcontext.set_widget_state(InputWidget::Coordinates, State::Unclickable);
 	rcontext.set_widget_state(InputWidget::ClickType, State::Unclickable);
 	rcontext.set_widget_state(InputWidget::MouseButtonSelection, State::Unclickable);
+	rcontext.set_widget_state(InputWidget::TimeScaleSelection, State::Unclickable);
 
 	rcontext.set_button_state(Button::CoordinatesEnabled, State::Unclickable);
 }
@@ -488,6 +525,7 @@ static void on_stop_enable_input(RenderingContext& rcontext) noexcept {
 	rcontext.set_widget_state(InputWidget::Coordinates, State::Clickable);
 	rcontext.set_widget_state(InputWidget::ClickType, State::Clickable);
 	rcontext.set_widget_state(InputWidget::MouseButtonSelection, State::Clickable);
+	rcontext.set_widget_state(InputWidget::TimeScaleSelection, State::Clickable);
 
 	rcontext.set_button_state(Button::CoordinatesEnabled, State::Clickable);
 }
@@ -499,7 +537,7 @@ void core_render_function(ImGuiIO& io, Renderer& renderer, OpenClicker& context)
 	auto& rcontext = renderer.render_context();
 	bool debug_enabled = context.is_debug();
 
-	ImGui::SetNextWindowSize(ImVec2(900, 500));
+	ImGui::SetNextWindowSize(ImVec2(1000, 500));
 
 	ImGui::Begin("OpenClicker", NULL, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse);
 	if (config.font())
@@ -514,15 +552,37 @@ void core_render_function(ImGuiIO& io, Renderer& renderer, OpenClicker& context)
 
 	// ---- Input for milliseconds between mouse clicks ---- //
 
+	auto tsc_is_disabled =
+		rcontext.get_widget_state(InputWidget::TimeScaleSelection) == State::Unclickable;
+
+	if (tsc_is_disabled) {
+		ImGui::Text("Time scale is currently disabled, please wait.");
+	}
+	else {
+		cc_checkbox("Use different time scale?", &rcontext.use_diff_time_scale, "Enable if you want to use something other than milliseconds.");
+
+		if (rcontext.use_diff_time_scale) {
+			ImGui::ListBox("Timescales",
+				&rcontext.selected_time_scale,
+				cc_time_scale_getter,
+				rcontext.time_scales,
+				time_scale_count);
+			ImGui::SameLine();
+			ImGui::Text(":  %s", cc_time_scale_getter(rcontext.time_scales, rcontext.selected_time_scale));
+			ImGui::SameLine();
+			cc_tooltip("Select what time scale you'd like to wait between clicks. The GUI will reflect these changes.");
+		}
+	}
+
 	auto mbc_is_disabled =
 		rcontext.get_widget_state(InputWidget::MillisecondBetweenClick) == State::Unclickable;
 
-	cc_int_input("Milliseconds between clicks",
-		&rcontext.millis_between_click,
+	auto delay_text = rcontext.time_scales[rcontext.selected_time_scale];
+
+	cc_int_input(delay_text.title_text,
+		&rcontext.time_between_click,
 		mbc_is_disabled,
-		"The amount of milliseconds that will pass between each automated click."
-		"\nNOTE: This number cannot be below zero."
-		"\nNOTE: 1000ms = 1s (So for example, a 2 second delay would be 2000ms)"
+		delay_text.tooltip_text
 	);
 
 	auto ld_is_disabled =
@@ -537,8 +597,8 @@ void core_render_function(ImGuiIO& io, Renderer& renderer, OpenClicker& context)
 
 	// Sanitize the millis to never go below zero.
 	// A zero/negative timeout would cause serious issues with Sleep(...)
-	if (rcontext.millis_between_click <= 0) {
-		rcontext.millis_between_click = 0;
+	if (rcontext.time_between_click <= 0) {
+		rcontext.time_between_click = 0;
 	}
 
 	auto ct_is_disabled = 
