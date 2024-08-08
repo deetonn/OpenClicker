@@ -17,6 +17,8 @@ Enjoy the perks and benefits that come with an auto-clicker without risking inst
 ## Reasoning
 I recently watched a video from [Eric Parker](https://www.youtube.com/watch?v=pN6VyYOfLIk) on YouTube which is fairly old, but made me realize that applications like this should be readily available without having to run the risk of having malware installed on your system.
 
+The fact that this [MALWARE](https://sourceforge.net/projects/orphamielautoclicker/) is so readily available (its the first result on Google to this day, 4 years later) is mind boggling.
+
 That being said, this application achieves that, and soon, much more.
 ## Requirements
 * DirectX11

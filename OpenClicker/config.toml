@@ -1,8 +1,7 @@
-[env]
-autoload_custom_variables = []
-
 [renderer]
-vsync = false
+height = 720
+vsync = true
+width = 1280
 
 [settings]
 debug = true

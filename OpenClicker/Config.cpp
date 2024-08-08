@@ -44,11 +44,6 @@ toml::table create_default_configuration() {
 	rendering_table->insert_or_assign("width", DEFAULT_WINDOW_WIDTH);
 	rendering_table->insert_or_assign("height", DEFAULT_WINDOW_HEIGHT);
 
-	root_table.insert_or_assign("env", toml::table{});
-	auto env_table = root_table["env"].as_table();
-
-	env_table->insert_or_assign("autoload_custom_variables", toml::array{});
-
 	root_table.insert_or_assign("style", toml::table{});
 	auto style_table = root_table["style"].as_table();
 

@@ -3,6 +3,7 @@
 #include "Console.hpp"
 
 #include <thread>
+#include <tuple>
 
 void Renderer::begin_render_loop(OpenClicker& context, Renderer& renderer) noexcept
 {
@@ -93,6 +94,23 @@ static const char* cc_click_type_getter(void* data, int index)
 	return "UNHANDLED CLICK TYPE?";
 }
 
+static const char* cc_mouse_button_getter(void* data, int index)
+{
+	if (index == static_cast<int>(MouseButton::LeftClick)) {
+		return "Left Mouse Button";
+	}
+	else if (index == static_cast<int>(MouseButton::RightClick)) {
+		return "Right Mouse Button";
+	}
+	else if (index == static_cast<int>(MouseButton::TopSideButton)) {
+		return "Top Side Button";
+	}
+	else if (index == static_cast<int>(MouseButton::BottomSideButton)) {
+		return "Bottom Side Button";
+	}
+	return "UNHANDLED MOUSE BUTTON?";
+}
+
 /* 
  Beginning of function that only exist in the source and need no definition. 
  These function are specifically called by core_render_function(...) and should
@@ -134,8 +152,226 @@ static void debug_window(RenderingContext& rcontext) noexcept {
 		rcontext.prev_waiting_for_thread_exit ? "Yes" : "No"
 	);
 	ImGui::Text("ClickTypeIdx: %i", rcontext.selected_click_type);
+	ImGui::Text("ButtonTypeIdx: %i", rcontext.selected_mouse_button);
 
 	ImGui::End();
+}
+
+static void create_mouse_event_double(
+	INPUT* inputs,
+	RenderingContext& context, 
+	MouseButton button
+) noexcept
+{
+	std::int32_t x = 0, y = 0;
+
+	if (context.coords[0] == 0 || context.coords[1] == 0) {
+		POINT point = {};
+		GetCursorPos(&point);
+		x = point.x;
+		y = point.y;
+	}
+	else {
+		x = context.coords[0];
+		y = context.coords[1];
+	}
+
+	auto* base = inputs;
+
+	if (button == MouseButton::LeftClick) {
+		base[0].type = INPUT_MOUSE;
+		base[0].mi.dx = x;
+		base[0].mi.dy = y;
+		base[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+
+		base[1].type = INPUT_MOUSE;
+		base[1].mi.dx = x;
+		base[1].mi.dy = y;
+		base[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+
+		base[2].type = INPUT_MOUSE;
+		base[2].mi.dx = x;
+		base[2].mi.dy = y;
+		base[2].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+
+		base[3].type = INPUT_MOUSE;
+		base[3].mi.dx = x;
+		base[3].mi.dy = y;
+		base[3].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+
+		context.stats.total_left_clicks += 2;
+	}
+	else if (button == MouseButton::RightClick) {
+		base[0].type = INPUT_MOUSE;
+		base[0].mi.dx = x;
+		base[0].mi.dy = y;
+		base[0].mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+
+		base[1].type = INPUT_MOUSE;
+		base[1].mi.dx = x;
+		base[1].mi.dy = y;
+		base[1].mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+
+		base[2].type = INPUT_MOUSE;
+		base[2].mi.dx = x;
+		base[2].mi.dy = y;
+		base[2].mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+
+		base[3].type = INPUT_MOUSE;
+		base[3].mi.dx = x;
+		base[3].mi.dy = y;
+		base[3].mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+
+		context.stats.total_right_clicks += 2;
+	}
+	else if (button == MouseButton::TopSideButton) {
+		// The top mouse button is XBUTTON1
+		inputs[0].type = INPUT_MOUSE;
+		inputs[0].mi.dx = x;
+		inputs[0].mi.dy = y;
+		inputs[0].mi.mouseData = XBUTTON1;
+		inputs[0].mi.dwFlags = MOUSEEVENTF_XDOWN;
+
+		inputs[1].type = INPUT_MOUSE;
+		inputs[1].mi.dx = x;
+		inputs[1].mi.dy = y;
+		inputs[1].mi.mouseData = XBUTTON1;
+		inputs[1].mi.dwFlags = MOUSEEVENTF_XUP;
+
+		inputs[2].type = INPUT_MOUSE;
+		inputs[2].mi.dx = x;
+		inputs[2].mi.dy = y;
+		inputs[2].mi.mouseData = XBUTTON1;
+		inputs[2].mi.dwFlags = MOUSEEVENTF_XDOWN;
+
+		inputs[3].type = INPUT_MOUSE;
+		inputs[3].mi.dx = x;
+		inputs[3].mi.dy = y;
+		inputs[3].mi.mouseData = XBUTTON1;
+		inputs[3].mi.dwFlags = MOUSEEVENTF_XUP;
+
+		context.stats.total_top_mb_clicks += 2;
+	}
+	else if (button == MouseButton::BottomSideButton) {
+		inputs[0].type = INPUT_MOUSE;
+		inputs[0].mi.dx = x;
+		inputs[0].mi.dy = y;
+		inputs[0].mi.mouseData = XBUTTON2;
+		inputs[0].mi.dwFlags = MOUSEEVENTF_XDOWN;
+
+		inputs[1].type = INPUT_MOUSE;
+		inputs[1].mi.dx = x;
+		inputs[1].mi.dy = y;
+		inputs[1].mi.mouseData = XBUTTON2;
+		inputs[1].mi.dwFlags = MOUSEEVENTF_XUP;
+
+		inputs[2].type = INPUT_MOUSE;
+		inputs[2].mi.dx = x;
+		inputs[2].mi.dy = y;
+		inputs[2].mi.mouseData = XBUTTON2;
+		inputs[2].mi.dwFlags = MOUSEEVENTF_XDOWN;
+
+		inputs[3].type = INPUT_MOUSE;
+		inputs[3].mi.dx = x;
+		inputs[3].mi.dy = y;
+		inputs[3].mi.mouseData = XBUTTON2;
+		inputs[3].mi.dwFlags = MOUSEEVENTF_XUP;
+
+		context.stats.total_bottom_mb_clicks += 2;
+	}
+	else {
+		auto* logger = Logger::the();
+		logger->warn("Unhandled mouse button: {}", static_cast<int>(button));
+	}
+}
+
+// This function returns the actual input event.
+static void create_mouse_event(INPUT* inputs, int index, RenderingContext& context, MouseButton button) noexcept
+{
+	bool is_double_click = context.all_click_types[context.selected_click_type] == ClickType::DoubleClick;
+
+	if (is_double_click) {
+		create_mouse_event_double(inputs, context, button);
+		return;
+	}
+
+	std::int32_t x = 0, y = 0;
+
+	if (context.coords[0] == 0 || context.coords[1] == 0) {
+		POINT point = {};
+		GetCursorPos(&point);
+		x = point.x;
+		y = point.y;
+	}
+	else {
+		x = context.coords[0];
+		y = context.coords[1];
+	}
+
+	// Cast is for clarity
+	auto* base = (index >= 2) ? (INPUT*)inputs + 2 : inputs;
+
+	if (button == MouseButton::LeftClick) {
+		base[0].type = INPUT_MOUSE;
+		base[0].mi.dx = x;
+		base[0].mi.dy = y;
+		base[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+
+		base[1].type = INPUT_MOUSE;
+		base[1].mi.dx = x;
+		base[1].mi.dy = y;
+		base[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+
+		context.stats.total_left_clicks += 1;
+	}
+	else if (button == MouseButton::RightClick) {
+		base[0].type = INPUT_MOUSE;
+		base[0].mi.dx = x;
+		base[0].mi.dy = y;
+		base[0].mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+
+		base[1].type = INPUT_MOUSE;
+		base[1].mi.dx = x;
+		base[1].mi.dy = y;
+		base[1].mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+
+		context.stats.total_right_clicks += 1;
+	}
+	else if (button == MouseButton::TopSideButton) {
+		// The top mouse button is XBUTTON1
+		base[0].type = INPUT_MOUSE;
+		base[0].mi.dx = x;
+		base[0].mi.dy = y;
+		base[0].mi.mouseData = XBUTTON1;
+		base[0].mi.dwFlags = MOUSEEVENTF_XDOWN;
+
+		base[1].type = INPUT_MOUSE;
+		base[1].mi.dx = x;
+		base[1].mi.dy = y;
+		base[1].mi.mouseData = XBUTTON1;
+		base[1].mi.dwFlags = MOUSEEVENTF_XUP;
+
+		context.stats.total_top_mb_clicks += 1;
+	}
+	else if (button == MouseButton::BottomSideButton) {
+		base[0].type = INPUT_MOUSE;
+		base[0].mi.dx = x;
+		base[0].mi.dy = y;
+		base[0].mi.mouseData = XBUTTON2;
+		base[0].mi.dwFlags = MOUSEEVENTF_XDOWN;
+
+		base[1].type = INPUT_MOUSE;
+		base[1].mi.dx = x;
+		base[1].mi.dy = y;
+		base[1].mi.mouseData = XBUTTON2;
+		base[1].mi.dwFlags = MOUSEEVENTF_XUP;
+
+		context.stats.total_bottom_mb_clicks += 1;
+	}
+	else {
+		auto* logger = Logger::the();
+		logger->warn("Unhandled mouse button: {}", static_cast<int>(button));
+	}
 }
 
 static void clicking_logic(RenderingContext* info) noexcept
@@ -145,6 +381,9 @@ static void clicking_logic(RenderingContext* info) noexcept
 			std::chrono::milliseconds(info->launch_delay)
 		);
 	}
+
+	auto click_type = info->all_mouse_buttons[info->selected_mouse_button];
+	auto button = info->all_mouse_buttons[info->selected_mouse_button];
 
 	while (!info->stop_click_threadf) {
 		if (GetAsyncKeyState(VK_F7) & 0x8000) {
@@ -157,32 +396,12 @@ static void clicking_logic(RenderingContext* info) noexcept
 			break;
 		}
 
-		int cursor_x = 0, cursor_y = 0;
-		if (info->coords[0] == 0 && info->coords[1] == 0) {
-			POINT cursor_pos = {};
-			GetCursorPos(&cursor_pos);
-			cursor_x = cursor_pos.x;
-			cursor_y = cursor_pos.y;
-		}
-		else {
-			cursor_x = info->coords[0];
-			cursor_y = info->coords[1];
-		}
-
 		auto click_type = info->all_click_types[info->selected_click_type];
 
 		if (click_type == ClickType::SingleClick) {
 			INPUT inputs[2] = {};
 
-			inputs[0].type = INPUT_MOUSE;
-			inputs[0].mi.dx = cursor_x;
-			inputs[0].mi.dy = cursor_y;
-			inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
-
-			inputs[1].type = INPUT_MOUSE;
-			inputs[1].mi.dx = cursor_x;
-			inputs[1].mi.dy = cursor_y;
-			inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+			create_mouse_event(inputs, NULL, *info, button);
 
 			auto sent =
 				SendInput(ARRAYSIZE(inputs), inputs, sizeof(INPUT));
@@ -193,31 +412,13 @@ static void clicking_logic(RenderingContext* info) noexcept
 				std::println("GetLastError() = {}", GetLastError());
 			}
 			else {
-				info->total_clicks += 1;
+				info->stats.total_clicks += 1;
 			}
 		}
 		else if (click_type == ClickType::DoubleClick) {
 			INPUT inputs[4] = {};
 
-			inputs[0].type = INPUT_MOUSE;
-			inputs[0].mi.dx = cursor_x;
-			inputs[0].mi.dy = cursor_y;
-			inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
-
-			inputs[1].type = INPUT_MOUSE;
-			inputs[1].mi.dx = cursor_x;
-			inputs[1].mi.dy = cursor_y;
-			inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
-
-			inputs[2].type = INPUT_MOUSE;
-			inputs[2].mi.dx = cursor_x;
-			inputs[2].mi.dy = cursor_y;
-			inputs[2].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
-
-			inputs[3].type = INPUT_MOUSE;
-			inputs[3].mi.dx = cursor_x;
-			inputs[3].mi.dy = cursor_y;
-			inputs[3].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+			create_mouse_event_double(inputs, *info, button);
 
 			auto sent =
 				SendInput(ARRAYSIZE(inputs), inputs, sizeof(INPUT));
@@ -228,7 +429,7 @@ static void clicking_logic(RenderingContext* info) noexcept
 				std::println("GetLastError() = {}", GetLastError());
 			}
 			else {
-				info->total_clicks += 2;
+				info->stats.total_clicks += 2;
 			}
 		}
 
@@ -270,12 +471,14 @@ static void setup_default_states(RenderingContext& rcontext) noexcept {
 	//       show this widget is handled with a checkbox (rcontext.coords_enabled)
 	rcontext.set_widget_state(InputWidget::Coordinates, State::Clickable);
 	rcontext.set_widget_state(InputWidget::ClickType, State::Clickable);
+	rcontext.set_widget_state(InputWidget::MouseButtonSelection, State::Clickable);
 }
 static void on_start_disable_input(RenderingContext& rcontext) noexcept {
 	rcontext.set_widget_state(InputWidget::LaunchDelay, State::Unclickable);
 	rcontext.set_widget_state(InputWidget::MillisecondBetweenClick, State::Unclickable);
 	rcontext.set_widget_state(InputWidget::Coordinates, State::Unclickable);
 	rcontext.set_widget_state(InputWidget::ClickType, State::Unclickable);
+	rcontext.set_widget_state(InputWidget::MouseButtonSelection, State::Unclickable);
 
 	rcontext.set_button_state(Button::CoordinatesEnabled, State::Unclickable);
 }
@@ -284,6 +487,7 @@ static void on_stop_enable_input(RenderingContext& rcontext) noexcept {
 	rcontext.set_widget_state(InputWidget::MillisecondBetweenClick, State::Clickable);
 	rcontext.set_widget_state(InputWidget::Coordinates, State::Clickable);
 	rcontext.set_widget_state(InputWidget::ClickType, State::Clickable);
+	rcontext.set_widget_state(InputWidget::MouseButtonSelection, State::Clickable);
 
 	rcontext.set_button_state(Button::CoordinatesEnabled, State::Clickable);
 }
@@ -295,7 +499,7 @@ void core_render_function(ImGuiIO& io, Renderer& renderer, OpenClicker& context)
 	auto& rcontext = renderer.render_context();
 	bool debug_enabled = context.is_debug();
 
-	ImGui::SetNextWindowSize(ImVec2(850, 500));
+	ImGui::SetNextWindowSize(ImVec2(900, 500));
 
 	ImGui::Begin("OpenClicker", NULL, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse);
 	if (config.font())
@@ -359,6 +563,29 @@ void core_render_function(ImGuiIO& io, Renderer& renderer, OpenClicker& context)
 		);
 	}
 
+	auto mbs_is_disabled = rcontext.get_widget_state(InputWidget::MouseButtonSelection) == State::Unclickable;
+
+	if (mbs_is_disabled) {
+		ImGui::Text("The mouse button selector is currently disabled. Please wait.");
+	}
+	else {
+		ImGui::ListBox(
+			"Mouse Button",
+			&rcontext.selected_mouse_button,
+			cc_mouse_button_getter,
+			rcontext.all_mouse_buttons,
+			mouse_button_count
+		);
+		ImGui::SameLine();
+		ImGui::Text(":  %s", cc_mouse_button_getter(rcontext.all_click_types, rcontext.selected_mouse_button));
+		ImGui::SameLine();
+		cc_tooltip("Select which mouse button to press.\n"
+				   "Left Mouse Button - The large button on the left of your mouse.\n"
+				   "Right Mouse Button - The large button on the right of your mouse.\n"
+				   "Top Side Button - The top button (furthest from you) on the side of your mouse (if applicable)\n"
+				   "Button Side Button - The bottom side button (closest to you) on the side of your mouse (if applicable)");
+	}
+
 	// ---- Coordinates widget logic ---- // 
 
 	auto ucc_is_disabled =
@@ -413,7 +640,14 @@ void core_render_function(ImGuiIO& io, Renderer& renderer, OpenClicker& context)
 
 	ImGui::SeparatorText("Stats");
 
-	ImGui::Text("Total Simulated Clicks: %zu", rcontext.total_clicks);
+	ImGui::BulletText("Total Mouse Clicks: %zu", rcontext.stats.total_clicks);
+	ImGui::TextDisabled("Left Mouse: %zu", rcontext.stats.total_left_clicks);
+	ImGui::SameLine();
+	ImGui::TextDisabled("Right Mouse: %zu", rcontext.stats.total_right_clicks);
+	ImGui::SameLine();
+	ImGui::TextDisabled("Side (Furthest): %zu", rcontext.stats.total_top_mb_clicks);
+	ImGui::SameLine();
+	ImGui::TextDisabled("Side (Closest): %zu", rcontext.stats.total_bottom_mb_clicks);
 
 	ImGui::SeparatorText("Actions");
 

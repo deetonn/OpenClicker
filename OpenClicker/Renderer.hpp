@@ -43,11 +43,29 @@ enum class ClickType {
 constexpr std::size_t click_type_count =
 	static_cast<std::size_t>(ClickType::SizeOfClickTypeDontTouch);
 
+enum class MouseButton {
+	// The left mouse button.
+	LeftClick,
+	// The right mouse button.
+	RightClick,
+	// The top side button.
+	TopSideButton,
+	// The bottom side button.
+	BottomSideButton,
+
+	SizeOfMouseButtonDontTouch,
+};
+
+constexpr std::size_t mouse_button_count =
+	static_cast<std::size_t>(MouseButton::SizeOfMouseButtonDontTouch);
+
 enum class InputWidget {
 	MillisecondBetweenClick,
 	LaunchDelay,
 	Coordinates,
 	ClickType,
+	MouseButtonSelection,
+
 	CountOfWidgetsDontMove
 };
 
@@ -67,6 +85,14 @@ constexpr std::size_t button_count =
 enum class State {
 	Clickable,
 	Unclickable
+};
+
+struct Stats {
+	std::size_t total_clicks{ 0 };
+	std::size_t total_left_clicks{ 0 };
+	std::size_t total_right_clicks{ 0 };
+	std::size_t total_top_mb_clicks{ 0 };
+	std::size_t total_bottom_mb_clicks{ 0 };
 };
 
 /*
@@ -99,13 +125,18 @@ struct RenderingContext {
 	// MUST be in this order.
 	ClickType all_click_types[2] = { ClickType::SingleClick, ClickType::DoubleClick };
 
+	// Correspoding to the below array. (Default to LeftMouse)
+	int selected_mouse_button = 0;
+	// MUST be in this order.
+	MouseButton all_mouse_buttons[4] = { MouseButton::LeftClick, MouseButton::RightClick, MouseButton::TopSideButton, MouseButton::BottomSideButton };
+
 	bool coords_enabled{ false };
 	int coords[2] = { 0, 0 };
 	bool capturing_mouse_coords{ false };
 
 	std::string log_text{"This is the log text, useful information will live here.\n"};
 
-	std::size_t total_clicks = 0;
+	Stats stats{};
 
 	template <class... Ts>
 	inline void logln(const std::format_string<Ts...> fmt, Ts&&... args) noexcept {
