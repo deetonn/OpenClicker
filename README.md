@@ -19,6 +19,8 @@ I recently watched a video from [Eric Parker](https://www.youtube.com/watch?v=pN
 
 The fact that this [MALWARE](https://sourceforge.net/projects/orphamielautoclicker/) is so readily available (its the first result on Google to this day, 4 years later) is mind boggling.
 
+This application does absolutely no networking and will not download anything.
+
 That being said, this application achieves that, and soon, much more.
 ## Requirements
 * DirectX11
