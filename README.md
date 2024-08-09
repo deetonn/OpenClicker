@@ -1,7 +1,7 @@
 # Open source auto-clicker 🖱️☝️
 
 Enjoy the perks and benefits that come with an auto-clicker without risking installing malware or paying. 
-![Image of OpenClicker](https://github.com/deetonn/OpenClicker/blob/master/OpenClicker/assets/media/app-screenshot.png)
+![Image of OpenClicker](https://github.com/deetonn/OpenClicker/blob/master/OpenClicker/assets/media/app-screenshot-v2.png)
  * Customizable delay between clicks (in milliseconds) 🦥
  * Add a launch delay if you want to delay the clicking after pressing **Start** 🚀
  * Select your own click type (Single click or Double click) 🤩
