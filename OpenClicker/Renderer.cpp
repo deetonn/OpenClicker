@@ -537,7 +537,9 @@ void core_render_function(ImGuiIO& io, Renderer& renderer, OpenClicker& context)
 	auto& rcontext = renderer.render_context();
 	bool debug_enabled = context.is_debug();
 
-	ImGui::SetNextWindowSize(ImVec2(1000, 500));
+	auto [x, y] = ImGui::GetWindowSize();
+	if (x < 900 || y < 650)
+		ImGui::SetNextWindowSize(ImVec2(1000, 650));
 
 	ImGui::Begin("OpenClicker", NULL, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse);
 	if (config.font())
