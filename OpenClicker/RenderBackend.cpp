@@ -172,36 +172,40 @@ void RenderBackend::set_resize_dimensions(const ResizeInfo& resize)
 	m_resize_info.requested_y_size = resize.requested_y_size;
 }
 
-static void setup_imgui_styles(ImGuiStyle* style)
+static void setup_imgui_styles(ImGuiStyle* style, Config& config)
 {
-	style->WindowPadding = ImVec2(15, 15);
-	style->WindowRounding = 5.0f;
-	style->FramePadding = ImVec2(5, 5);
-	style->FrameRounding = 4.0f;
-	style->ItemSpacing = ImVec2(12, 8);
-	style->ItemInnerSpacing = ImVec2(8, 6);
-	style->IndentSpacing = 25.0f;
-	style->ScrollbarSize = 15.0f;
-	style->ScrollbarRounding = 9.0f;
-	style->GrabMinSize = 5.0f;
-	style->GrabRounding = 3.0f;
+	// Loading style things and not color related things.
 
-	style->Colors[ImGuiCol_Text] = ImVec4(0.80f, 0.80f, 0.83f, 1.00f);
-	style->Colors[ImGuiCol_TextDisabled] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
-	style->Colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
-	style->Colors[ImGuiCol_PopupBg] = ImVec4(0.07f, 0.07f, 0.09f, 1.00f);
-	style->Colors[ImGuiCol_Border] = ImVec4(0.80f, 0.80f, 0.83f, 0.88f);
-	style->Colors[ImGuiCol_BorderShadow] = ImVec4(0.92f, 0.91f, 0.88f, 0.00f);
-	style->Colors[ImGuiCol_FrameBg] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
-	style->Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
-	style->Colors[ImGuiCol_FrameBgActive] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
-	style->Colors[ImGuiCol_TitleBg] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
-	style->Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(1.00f, 0.98f, 0.95f, 0.75f);
-	style->Colors[ImGuiCol_TitleBgActive] = ImVec4(0.07f, 0.07f, 0.09f, 1.00f);
-	style->Colors[ImGuiCol_MenuBarBg] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
-	style->Colors[ImGuiCol_ScrollbarBg] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
-	style->Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.80f, 0.80f, 0.83f, 0.31f);
-	style->Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
+	auto* style_table = config.get_styles_table();
+
+	style->WindowPadding = config.get_vec2_from(style_table, get_style_name(StyleConfig_WindowPadding), DEFAULT_WINDOW_PADDING);
+	style->WindowRounding = config.get_double_from(style_table, get_style_name(StyleConfig_WindowRounding), DEFAULT_WINDOW_ROUNDING);
+	style->FramePadding = config.get_vec2_from(style_table, get_style_name(StyleConfig_FramePadding), DEFAULT_WINDOW_PADDING);
+	style->FrameRounding = config.get_double_from(style_table, get_style_name(StyleConfig_FrameRounding), DEFAULT_FRAME_ROUNDING);
+	style->ItemSpacing = config.get_vec2_from(style_table, get_style_name(StyleConfig_ItemSpacing), DEFAULT_ITEM_SPACING);
+	style->ItemInnerSpacing = config.get_vec2_from(style_table, get_style_name(StyleConfig_ItemInnerSpacing), DEFAULT_ITEM_INNER_SPACING);
+	style->IndentSpacing = config.get_config_value<double>(StyleConfig_IndentSpacing, DEFAULT_INDENT_SPACING);
+	style->ScrollbarSize = config.get_config_value<double>(StyleConfig_ScrollBarSize, DEFAULT_SCROLL_BAR_SIZE);
+	style->ScrollbarRounding = config.get_config_value<double>(StyleConfig_ScrollBarRounding, DEFAULT_SCROLL_BAR_ROUNDING);
+	style->GrabMinSize = config.get_config_value<double>(StyleConfig_GrabMinSize, DEFAULT_GRAB_MIN_SIZE);
+	style->GrabRounding = config.get_config_value<double>(StyleConfig_GrabRounding, DEFAULT_GRAB_ROUNDING);
+
+	style->Colors[ImGuiCol_Text] = config.get_config_value<ImVec4>(StyleConfig_TextColor, DEFAULT_TEXT_COLOR);
+	style->Colors[ImGuiCol_TextDisabled] = config.get_config_value<ImVec4>(StyleConfig_DisabledTextColor, DEFAULT_DISABLED_TEXT_COLOR);;
+	style->Colors[ImGuiCol_WindowBg] = config.get_config_value<ImVec4>(StyleConfig_BackgroundColor, DEFAULT_BACKGROUND_COLOR);
+	style->Colors[ImGuiCol_PopupBg] = config.get_config_value<ImVec4>(StyleConfig_PopupBackgroundColor, DEFAULT_POPUP_BACKGROUND_COLOR);
+	style->Colors[ImGuiCol_Border] = config.get_config_value<ImVec4>(StyleConfig_BorderColor, DEFAULT_BORDER_COLOR);
+	style->Colors[ImGuiCol_BorderShadow] = config.get_config_value<ImVec4>(StyleConfig_BorderShadowColor, DEFAULT_BORDER_SHADOW_COLOR);
+	style->Colors[ImGuiCol_FrameBg] = config.get_config_value<ImVec4>(StyleConfig_FrameBackgroundColor, DEFAULT_FRAME_BACKGROUND_COLOR);
+	style->Colors[ImGuiCol_FrameBgHovered] = config.get_config_value<ImVec4>(StyleConfig_FrameHoveredBackgroundColor, DEFAULT_FRAME_HOVERED_BACKGROUND_COLOR);
+	style->Colors[ImGuiCol_FrameBgActive] = config.get_config_value<ImVec4>(StyleConfig_FrameActiveBackgroundColor, DEFAULT_FRAME_ACTIVE_BACKGROUND_COLOR);
+	style->Colors[ImGuiCol_TitleBg] = config.get_config_value<ImVec4>(StyleConfig_TitleBackgroundColor, DEFAULT_TITLE_BACKGROUND_COLOR);
+	style->Colors[ImGuiCol_TitleBgCollapsed] = config.get_config_value<ImVec4>(StyleConfig_TitleCollapsedColor, DEFAULT_TITLE_COLLAPSED_COLOR);
+	style->Colors[ImGuiCol_TitleBgActive] = config.get_config_value<ImVec4>(StyleConfig_TitleActiveBackgroundColor, DEFAULT_TITLE_ACTIVE_COLOR);
+	style->Colors[ImGuiCol_MenuBarBg] = config.get_config_value<ImVec4>(StyleConfig_MenuBarBackgroundColor, DEFAULT_MENU_BAR_BACKGROUND_COLOR);
+	style->Colors[ImGuiCol_ScrollbarBg] = config.get_config_value<ImVec4>(StyleConfig_ScrollBarBackgroundColor, DEFAULT_SCROLLBAR_BACKGROUND_COLOR);
+	style->Colors[ImGuiCol_ScrollbarGrab] = config.get_config_value<ImVec4>(StyleConfig_ScrollBarGrabColor, DEFAULT_SCROLLBAR_GRAB_BACKGROUND_COLOR);
+	style->Colors[ImGuiCol_ScrollbarGrabHovered] = config.get_config_value<ImVec4>(StyleConfig_ScrollBarGrabHovered, DEFAULT_SCROLLBAR_GRAB_HOVERED_COLOR);
 	style->Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
 	style->Colors[ImGuiCol_CheckMark] = ImVec4(0.80f, 0.80f, 0.83f, 0.31f);
 	style->Colors[ImGuiCol_SliderGrab] = ImVec4(0.80f, 0.80f, 0.83f, 0.31f);
@@ -212,13 +216,6 @@ static void setup_imgui_styles(ImGuiStyle* style)
 	style->Colors[ImGuiCol_Header] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
 	style->Colors[ImGuiCol_HeaderHovered] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
 	style->Colors[ImGuiCol_HeaderActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
-	style->Colors[ImGuiCol_ResizeGrip] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-	style->Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
-	style->Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
-	style->Colors[ImGuiCol_PlotLines] = ImVec4(0.40f, 0.39f, 0.38f, 0.63f);
-	style->Colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
-	style->Colors[ImGuiCol_PlotHistogram] = ImVec4(0.40f, 0.39f, 0.38f, 0.63f);
-	style->Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
 	style->Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.25f, 1.00f, 0.00f, 0.43f);
 }
 
@@ -230,7 +227,7 @@ void RenderBackend::render(const RenderCallback& render_call, OpenClicker& conte
 	auto& config = context.config();
 	config.prepare_assets(config);
 
-	setup_imgui_styles(&ImGui::GetStyle());
+	setup_imgui_styles(&ImGui::GetStyle(), context.config());
 
 	while (still_rendering) {
 		MSG msg;
