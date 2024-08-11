@@ -325,6 +325,7 @@ static void create_mouse_event(INPUT* inputs, int index, RenderingContext& conte
 	else {
 		x = context.coords[0];
 		y = context.coords[1];
+		SetCursorPos(x, y);
 	}
 
 	// Cast is for clarity
@@ -561,7 +562,7 @@ void core_render_function(ImGuiIO& io, Renderer& renderer, OpenClicker& context)
 		ImGui::Text("Time scale is currently disabled, please wait.");
 	}
 	else {
-		cc_checkbox("Use different time scale?", &rcontext.use_diff_time_scale, "Enable if you want to use something other than milliseconds.");
+		cc_checkbox("Use different time scale?", &rcontext.use_diff_time_scale, "Enable if you want to use something other than milliseconds.\n NOTE: This affects the widget directly below this one.");
 
 		if (rcontext.use_diff_time_scale) {
 			ImGui::ListBox("Timescales",
@@ -586,6 +587,11 @@ void core_render_function(ImGuiIO& io, Renderer& renderer, OpenClicker& context)
 		mbc_is_disabled,
 		delay_text.tooltip_text
 	);
+
+	if (rcontext.time_between_click <= 0) {
+		rcontext.logln("You cannot have a delay of 0, that breaks the app.");
+		rcontext.time_between_click = 1;
+	}
 
 	auto ld_is_disabled =
 		rcontext.get_widget_state(InputWidget::LaunchDelay) == State::Unclickable;
@@ -715,8 +721,10 @@ void core_render_function(ImGuiIO& io, Renderer& renderer, OpenClicker& context)
 
 	// ---- Start button logic ---- //
 
+	const bool wants_start_bind = (GetAsyncKeyState(VK_F6) & 0x8000) && rcontext.waiting_for_thread_exit != true;
+
 	if (rcontext.get_button_state(Button::Start) == State::Clickable && rcontext.waiting_for_thread_exit != true) {
-		if (cc_button("Start", "Begin auto-clicking.")) {
+		if (cc_button("Start (F6)", "Begin auto-clicking.") || wants_start_bind) {
 			// Begin auto-clicking thread..
 			rcontext.set_button_state(Button::Start, State::Unclickable);
 			rcontext.set_button_state(Button::Stop, State::Clickable);
